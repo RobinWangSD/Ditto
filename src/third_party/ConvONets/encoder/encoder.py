@@ -12,7 +12,15 @@ from src.third_party.ConvONets.encoder.pointnetpp_corr import PointNetPlusPlusCo
 from src.third_party.ConvONets.encoder.unet import UNet
 from src.third_party.ConvONets.encoder.unet3d import UNet3D
 from src.third_party.ConvONets.layers import ResnetBlockFC
-
+'''
+# [modification]
+#  --------------------------------------------------------------------------------
+from src.third_party.ConvONets.encoder.pointnetpp_utils import (
+    PointNetFeaturePropagation,
+    PointNetSetAbstraction,
+)
+#  --------------------------------------------------------------------------------
+'''
 
 class LocalPoolPointnetPPFusion(nn.Module):
     """PointNet++Attn-based encoder network with ResNet blocks for each point.
@@ -115,6 +123,32 @@ class LocalPoolPointnetPPFusion(nn.Module):
         self.plane_type = plane_type
         self.padding = padding
 
+        '''
+        # [modification] 
+        #  --------------------------------------------------------------------------------
+        self.sa1 = PointNetSetAbstraction(
+            npoint=512,
+            radius=0.2,
+            nsample=32,
+            in_channel=6,
+            mlp=[64, 64, 128],
+            group_all=False,
+        )
+        self.sa2 = PointNetSetAbstraction(
+            npoint=128,
+            radius=0.4,
+            nsample=64,
+            in_channel=128 + 3,
+            mlp=[128, 128, 256],
+            group_all=False,
+        )
+
+        self.fp2 = PointNetFeaturePropagation(in_channel=640, mlp=[512, 256])
+        self.fp1 = PointNetFeaturePropagation(in_channel=256, mlp=[256, 128, hidden_dim*2])
+        #  --------------------------------------------------------------------------------
+        '''
+
+
         if scatter_type == "max":
             self.scatter = scatter_max
         elif scatter_type == "mean":
@@ -190,7 +224,7 @@ class LocalPoolPointnetPPFusion(nn.Module):
         return c_out.permute(0, 2, 1)
 
     def forward(self, p, p2):
-        batch_size, T, D = p.size()
+        batch_size, T, D = p.size() # T: num_points, D: dim(3) 
 
         # acquire the index for each point
         coord = {}
@@ -211,11 +245,38 @@ class LocalPoolPointnetPPFusion(nn.Module):
             )
             index["yz"] = coordinate2index(coord["yz"], self.reso_plane)
         if "grid" in " ".join(self.plane_type):
-            coord["grid"] = normalize_3d_coordinate(p.clone(), padding=self.padding)
-            index["grid"] = coordinate2index(
+            coord["grid"] = normalize_3d_coordinate(p.clone(), padding=self.padding) # 32xTx3
+            index["grid"] = coordinate2index(                                        # 32x1xT
                 coord["grid"], self.reso_grid, coord_type="3d"
             )
-        _, net, net_corr = self.feat_pos(p, p2, return_score=self.return_score)
+            
+        _, net, net_corr = self.feat_pos(p, p2, return_score=self.return_score) #return_score = False
+        # net: 32xTx256, net_corr: 32xTX256
+        '''
+        # [modification] 
+        #  --------------------------------------------------------------------------------
+        p = p.permute(0,2,1)
+        l0_points = p
+        l0_xyz = p[:, :3, :]
+        # group & sampling + pointnet
+        l1_xyz, l1_points, l1_fps_idx = self.sa1(l0_xyz, l0_points, returnfps=True) 
+        # l1_xyz: 32x3x512, l1_points: 32x128x512, l1_fps_idx: 32x512
+        l2_xyz, l2_points, l2_fps_idx = self.sa2(l1_xyz, l1_points, returnfps=True)
+        # l2_xyz: 32x3x128 l2_points: 32x256x128 l2_fps_idx: 32x128
+        fps_idx = torch.gather(l1_fps_idx, 1, l2_fps_idx) # 32x128
+
+        #  fake correpondance
+        l2_points = torch.cat((l2_points, l2_points), dim=1)
+
+        l1_points_back = self.fp2(l1_xyz, l2_xyz, l1_points, l2_points)  # 32x256x512
+        l0_points = self.fp1(l0_xyz, l1_xyz, None, l1_points_back)       # 32x256xT
+
+        # return to original variable name
+        net = l0_points.permute(0,2,1)
+        net_corr = net
+        #  --------------------------------------------------------------------------------
+        '''
+
 
         net = self.blocks[0](net)
         for block in self.blocks[1:]:
@@ -243,7 +304,7 @@ class LocalPoolPointnetPPFusion(nn.Module):
                     fea[f] = self.generate_plane_features(
                         p, c_corr, plane=k2, unet=self.unet_corr
                     )
-            elif k2 == "grid":
+            elif k2 == "grid":     # always use -geo for grid features
                 if k1 == "geo":
                     fea[f] = self.generate_grid_features(p, c, unet3d=self.unet3d)
                 elif k1 == "corr":

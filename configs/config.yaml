@@ -2,9 +2,9 @@
 
 # specify here default training configuration
 defaults:
-  - trainer: minimal.yaml
-  - model: screw_model.yaml
-  - datamodule: screw_datamodule.yaml
+  - trainer: default.yaml #minimal.yaml
+  - model: geo_art_model_v0.yaml #screw_model.yaml
+  - datamodule: default_datamodule.yaml #screw_datamodule.yaml
   - callbacks: default.yaml # set this to null if you don't want to use callbacks
   - logger: csv # set logger here or use command line (e.g. `python run.py logger=wandb`)
 

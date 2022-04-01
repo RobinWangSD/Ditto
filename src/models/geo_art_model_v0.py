@@ -65,9 +65,15 @@ class GeoArtModelV0(pl.LightningModule):
             logits_joint_type,
             joint_param_revolute,
             joint_param_prismatic,
-        ) = self(data["pc_start"], data["pc_end"], data["p_occ"], data["p_seg"])
+        #) = self(data["pc_start"][:,:100,:], data["pc_end"][:,:100,:], data["p_occ"][:,:100,:], data["p_seg"][:,:100,:]) 
+        ) = self(data["pc_start"], data["pc_end"], data["p_occ"], data["p_seg"]) 
+        # pc_start: 32x8192x3, pc_end: 32x8192x3, p_occ: 32x2048x3, p_seg: 32x512x3
         joint_label = data["joint_type"].unsqueeze(-1).repeat(1, data["p_seg"].size(1))
         loss_occ = self.cri_cls(logits_occ, data["occ_label"].float())
+
+        # [modification] remove extra loss function parts
+        #  --------------------------------------------------------------------------------
+        '''
         loss_seg = self.cri_cls(logits_seg, data["seg_label"].float())
         loss_joint_cls = self.cri_cls(logits_joint_type, joint_label.float())
         joint_p_axis = joint_param_prismatic[:, :, :3]
@@ -124,7 +130,11 @@ class GeoArtModelV0(pl.LightningModule):
         self.log("train/loss_joint_cls", loss_joint_cls)
         self.log("train/loss_joint_param", loss_joint_param)
         self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        '''
+        loss = self.hparams.loss_weight_occ * loss_occ
+        self.log("train/loss_occ", loss_occ)
 
+        #  --------------------------------------------------------------------------------
         return loss
 
     def validation_step(self, data, batch_idx):
@@ -134,9 +144,14 @@ class GeoArtModelV0(pl.LightningModule):
             logits_joint_type,
             joint_param_revolute,
             joint_param_prismatic,
+        #) = self(data["pc_start"][:,:100,:], data["pc_end"][:,:100,:], data["p_occ"][:,:100,:], data["p_seg"][:,:100,:]) 
         ) = self(data["pc_start"], data["pc_end"], data["p_occ"], data["p_seg"])
         joint_label = data["joint_type"].unsqueeze(-1).repeat(1, data["p_seg"].size(1))
         loss_occ = self.cri_cls(logits_occ, data["occ_label"].float())
+
+        # [modification] remove extra loss function parts
+        #  --------------------------------------------------------------------------------
+        '''
         loss_seg = self.cri_cls(logits_seg, data["seg_label"].float())
         loss_joint_cls = self.cri_cls(logits_joint_type, joint_label.float())
         joint_p_axis = joint_param_prismatic[:, :, :3]
@@ -188,6 +203,9 @@ class GeoArtModelV0(pl.LightningModule):
         self.log("val/loss_joint_cls", loss_joint_cls)
         self.log("val/loss_joint_param", loss_joint_param)
         self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        '''
+        loss = self.hparams.loss_weight_occ * loss_occ
+        self.log("val/loss_occ", loss_occ)
 
         prob_occ = torch.sigmoid(logits_occ)
         prob_seg = torch.sigmoid(logits_seg)
@@ -212,7 +230,7 @@ class GeoArtModelV0(pl.LightningModule):
         seg_iou = seg_and.float().sum(-1) / seg_or.float().sum(-1)
         self.occ_iou_meter.update(occ_iou)
         self.seg_iou_meter.update(seg_iou)
-
+        '''
         if data["joint_type"].item() == 0:  # revoluted
             self.revoluted_axis_ori_meter.update(revolute_result_dict["axis_ori"])
             if self.hparams["r_cos_ambiguity"]:
@@ -238,6 +256,9 @@ class GeoArtModelV0(pl.LightningModule):
                 config_error = (gt_t - joint_p_t).abs()
             self.revoluted_degree_meter.update((config_error).abs())
             self.prismatic_offset_meter.update((gt_t - joint_p_t).abs())
+        '''
+        #  --------------------------------------------------------------------------------
+        
         return loss
 
     def log_meter(self, meter, name):
@@ -248,11 +269,11 @@ class GeoArtModelV0(pl.LightningModule):
     def validation_epoch_end(self, val_step_outputs):
         self.log_meter(self.occ_pr_meter, "occ_precision")
         self.log_meter(self.occ_rc_meter, "occ_recall")
-        self.log_meter(self.seg_pr_meter, "seg_precision")
-        self.log_meter(self.seg_rc_meter, "seg_recall")
+        #self.log_meter(self.seg_pr_meter, "seg_precision")
+        #self.log_meter(self.seg_rc_meter, "seg_recall")
         self.log_meter(self.occ_iou_meter, "occ_iou")
-        self.log_meter(self.seg_iou_meter, "seg_iou")
-
+        #self.log_meter(self.seg_iou_meter, "seg_iou")
+        '''
         self.log_meter(self.revoluted_axis_ori_meter, "revoluted_axis_ori")
         self.log_meter(self.revoluted_degree_meter, "revoluted_degree")
         self.log_meter(self.revoluted_p2l_ori_meter, "revoluted_p2l_ori")
@@ -261,6 +282,7 @@ class GeoArtModelV0(pl.LightningModule):
 
         self.log_meter(self.prismatic_axis_ori_meter, "prismatic_axis_ori")
         self.log_meter(self.prismatic_offset_meter, "prismatic_offset")
+        '''
 
     def test_step(self, data, batch_idx):
 
