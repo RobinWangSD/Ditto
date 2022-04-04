@@ -65,7 +65,6 @@ class GeoArtModelV0(pl.LightningModule):
             logits_joint_type,
             joint_param_revolute,
             joint_param_prismatic,
-        #) = self(data["pc_start"][:,:100,:], data["pc_end"][:,:100,:], data["p_occ"][:,:100,:], data["p_seg"][:,:100,:]) 
         ) = self(data["pc_start"], data["pc_end"], data["p_occ"], data["p_seg"]) 
         # pc_start: 32x8192x3, pc_end: 32x8192x3, p_occ: 32x2048x3, p_seg: 32x512x3
         joint_label = data["joint_type"].unsqueeze(-1).repeat(1, data["p_seg"].size(1))
@@ -73,64 +72,7 @@ class GeoArtModelV0(pl.LightningModule):
 
         # [modification] remove extra loss function parts
         #  --------------------------------------------------------------------------------
-        '''
-        loss_seg = self.cri_cls(logits_seg, data["seg_label"].float())
-        loss_joint_cls = self.cri_cls(logits_joint_type, joint_label.float())
-        joint_p_axis = joint_param_prismatic[:, :, :3]
-        joint_p_t = joint_param_prismatic[:, :, 3]
-
-        joint_r_axis = joint_param_revolute[:, :, :3]
-        joint_r_t = joint_param_revolute[:, :, 3]
-        joint_r_p2l_vec = joint_param_revolute[:, :, 4:7]
-        joint_r_p2l_dist = joint_param_revolute[:, :, 7]
-
-        gt_t = data["state_end"] - data["state_start"]
-        loss_prismatic, _ = self.cri_joint_p(
-            data["seg_label"].float(),
-            joint_p_axis,
-            joint_p_t,
-            data["screw_axis"],
-            gt_t,
-        )
-        loss_revolute, _ = self.cri_joint_r(
-            data["p_seg"],
-            data["seg_label"].float(),
-            joint_r_axis,
-            joint_r_t,
-            joint_r_p2l_vec,
-            joint_r_p2l_dist,
-            data["screw_axis"],
-            gt_t,
-            data["p2l_vec"],
-            data["p2l_dist"],
-        )
-
-        if data["joint_type"].sum() == 0:
-            # revolute only
-            loss_joint_param = loss_revolute.mean()
-        elif data["joint_type"].mean() == 1:
-            # prismatic only
-            loss_joint_param = loss_prismatic.mean()
-        else:
-            mask_reg = F.one_hot(data["joint_type"].long(), num_classes=2)
-            loss_joint_param = (
-                torch.stack((loss_revolute, loss_prismatic), dim=1) * mask_reg
-            )
-            loss_joint_param = loss_joint_param.sum(-1).mean()
-
-        loss = (
-            self.hparams.loss_weight_occ * loss_occ
-            + self.hparams.loss_weight_seg * loss_seg
-            + self.hparams.loss_weight_joint_type * loss_joint_cls
-            + self.hparams.loss_weight_joint_param * loss_joint_param
-        )
-        # loss = loss_occ
-        self.log("train/loss_occ", loss_occ)
-        self.log("train/loss_seg", loss_seg)
-        self.log("train/loss_joint_cls", loss_joint_cls)
-        self.log("train/loss_joint_param", loss_joint_param)
-        self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
-        '''
+        
         loss = self.hparams.loss_weight_occ * loss_occ
         self.log("train/loss_occ", loss_occ)
 
@@ -151,59 +93,7 @@ class GeoArtModelV0(pl.LightningModule):
 
         # [modification] remove extra loss function parts
         #  --------------------------------------------------------------------------------
-        '''
-        loss_seg = self.cri_cls(logits_seg, data["seg_label"].float())
-        loss_joint_cls = self.cri_cls(logits_joint_type, joint_label.float())
-        joint_p_axis = joint_param_prismatic[:, :, :3]
-        joint_p_t = joint_param_prismatic[:, :, 3]
-
-        joint_r_axis = joint_param_revolute[:, :, :3]
-        joint_r_t = joint_param_revolute[:, :, 3]
-        joint_r_p2l_vec = joint_param_revolute[:, :, 4:7]
-        joint_r_p2l_dist = joint_param_revolute[:, :, 7]
-
-        gt_t = data["state_end"] - data["state_start"]
-
-        loss_prismatic, prismatic_result_dict = self.cri_joint_p(
-            data["seg_label"].float(),
-            joint_p_axis,
-            joint_p_t,
-            data["screw_axis"],
-            gt_t,
-        )
-        loss_revolute, revolute_result_dict = self.cri_joint_r(
-            data["p_seg"],
-            data["seg_label"].float(),
-            joint_r_axis,
-            joint_r_t,
-            joint_r_p2l_vec,
-            joint_r_p2l_dist,
-            data["screw_axis"],
-            gt_t,
-            data["p2l_vec"],
-            data["p2l_dist"],
-        )
-
-        mask_reg = F.one_hot(data["joint_type"].long(), num_classes=2)
-        loss_joint_param = (
-            torch.stack((loss_revolute, loss_prismatic), dim=1) * mask_reg
-        )
-        loss_joint_param = loss_joint_param.sum(-1).mean()
-
-        loss = (
-            self.hparams.loss_weight_occ * loss_occ
-            + self.hparams.loss_weight_seg * loss_seg
-            + self.hparams.loss_weight_joint_type * loss_joint_cls
-            + self.hparams.loss_weight_joint_param * loss_joint_param
-        )
-        # loss = loss_occ
-
-        self.log("val/loss_occ", loss_occ)
-        self.log("val/loss_seg", loss_seg)
-        self.log("val/loss_joint_cls", loss_joint_cls)
-        self.log("val/loss_joint_param", loss_joint_param)
-        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
-        '''
+        
         loss = self.hparams.loss_weight_occ * loss_occ
         self.log("val/loss_occ", loss_occ)
 
@@ -230,33 +120,7 @@ class GeoArtModelV0(pl.LightningModule):
         seg_iou = seg_and.float().sum(-1) / seg_or.float().sum(-1)
         self.occ_iou_meter.update(occ_iou)
         self.seg_iou_meter.update(seg_iou)
-        '''
-        if data["joint_type"].item() == 0:  # revoluted
-            self.revoluted_axis_ori_meter.update(revolute_result_dict["axis_ori"])
-            if self.hparams["r_cos_ambiguity"]:
-                config_error = torch.minimum(
-                    (gt_t - joint_r_t).abs(), (gt_t + joint_r_t).abs()
-                )
-            else:
-                config_error = (gt_t - joint_r_t).abs()
-            self.revoluted_degree_meter.update((config_error).abs())
-            self.revoluted_p2l_ori_meter.update(revolute_result_dict["p2l_ori"])
-            self.revoluted_p2l_dist_meter.update(revolute_result_dict["p2l_dist"])
-            self.revoluted_displacement_meter.update(
-                revolute_result_dict["displacement"]
-            )
-
-        elif data["joint_type"].item() == 1:  # prismatic
-            self.prismatic_axis_ori_meter.update(prismatic_result_dict["axis_ori"])
-            if self.hparams["p_cos_ambiguity"]:
-                config_error = torch.minimum(
-                    (gt_t - joint_p_t).abs(), (gt_t + joint_p_t).abs()
-                )
-            else:
-                config_error = (gt_t - joint_p_t).abs()
-            self.revoluted_degree_meter.update((config_error).abs())
-            self.prismatic_offset_meter.update((gt_t - joint_p_t).abs())
-        '''
+        
         #  --------------------------------------------------------------------------------
         
         return loss
@@ -273,16 +137,7 @@ class GeoArtModelV0(pl.LightningModule):
         #self.log_meter(self.seg_rc_meter, "seg_recall")
         self.log_meter(self.occ_iou_meter, "occ_iou")
         #self.log_meter(self.seg_iou_meter, "seg_iou")
-        '''
-        self.log_meter(self.revoluted_axis_ori_meter, "revoluted_axis_ori")
-        self.log_meter(self.revoluted_degree_meter, "revoluted_degree")
-        self.log_meter(self.revoluted_p2l_ori_meter, "revoluted_p2l_ori")
-        self.log_meter(self.revoluted_p2l_dist_meter, "revoluted_p2l_dist")
-        self.log_meter(self.revoluted_displacement_meter, "revoluted_displacement")
-
-        self.log_meter(self.prismatic_axis_ori_meter, "prismatic_axis_ori")
-        self.log_meter(self.prismatic_offset_meter, "prismatic_offset")
-        '''
+        
 
     def test_step(self, data, batch_idx):
 
