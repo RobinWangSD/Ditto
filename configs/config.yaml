@@ -2,7 +2,7 @@
 
 # specify here default training configuration
 defaults:
-  - trainer: default.yaml #minimal.yaml
+  - trainer: minimal.yaml
   - model: geo_art_model_v0.yaml #screw_model.yaml
   - datamodule: default_datamodule.yaml #screw_datamodule.yaml
   - callbacks: default.yaml # set this to null if you don't want to use callbacks

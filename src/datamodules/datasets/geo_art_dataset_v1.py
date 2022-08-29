@@ -62,9 +62,13 @@ class GeoArtDatasetV1(Dataset):
         else:
             if "syn" in self.path_list[index]:
                 joint_index = 1
+            occ_label = data["start_occ_list"][1,:]
+            seg_label_full = data["start_occ_list"][0,:]
+            '''
             occ_label, seg_label_full = occ_to_binary_label(
                 data["start_occ_list"], joint_index
             )
+            '''
 
         # process occ and seg points
         p_occ_start = data["start_p_occ"]
@@ -77,7 +81,7 @@ class GeoArtDatasetV1(Dataset):
         center = (bound_min + bound_max) / 2
         scale = (bound_max - bound_min).max()
         scale = scale * (1 + self.norm_padding)
-
+        
         pc_start = (pc_start - center) / scale
         pc_end = (pc_end - center) / scale
         p_occ_start = (p_occ_start - center) / scale
@@ -134,6 +138,7 @@ class GeoArtDatasetV1(Dataset):
             "scale": scale,
             "center": center,
             "data_path": self.path_list[index],
+            "T_world_nocs": data["T_world_nocs"]
         }
         for k, v in return_dict.items():
             if isinstance(v, np.ndarray):

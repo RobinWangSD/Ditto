@@ -5,16 +5,13 @@ opt:
     dataset_type: GeoArtDatasetV0
     data_dir: ${data_dir} # data_dir is specified in config.yaml
     data_path:
-      - syn/cabinet2_rand_train_1K
-      - syn/drawer_train_1K
-      - syn/microwave_train_1K
-      - syn/toaster_train_1K
+      - demo/training
     num_point: 8192
     num_point_occ: 2048
     num_point_seg: 512
     norm: True
     norm_padding: 0.1
-    batch_size: 32
+    batch_size: 8
     num_workers: 4
     rand_rot: False # random rotation of input data
     weighted_occ_sample: False
@@ -23,10 +20,7 @@ opt:
     dataset_type: GeoArtDatasetV1
     data_dir: ${data_dir} # data_dir is specified in config.yaml
     data_path:
-      - syn/cabinet2_rand_val_50
-      - syn/drawer_val_50
-      - syn/microwave_val_50
-      - syn/toaster_val_50
+      - demo/testing
     num_point: 8192
     #num_point_occ: 90000
     #num_point_seg: 5000
@@ -36,19 +30,16 @@ opt:
     num_workers: 4
     rand_rot: False # random rotation of input data
 
-  test:
-    dataset_type: GeoArtDatasetV1
-    data_dir: ${data_dir} # data_dir is specified in config.yaml
-    data_path:
-      - syn/cabinet2_rand_test_standard
-      - syn/drawer_test_standard
-      - syn/microwave_test_standard
-      - syn/toaster_test_standard
-    num_point: 8192
-    #num_point_occ: 90000
-    #num_point_seg: 5000
-    norm: True
-    norm_padding: 0.1
-    batch_size: 1
-    num_workers: 4
-    rand_rot: False # random rotation of input data
+  #test:
+  #  dataset_type: GeoArtDatasetV1
+  #  data_dir: ${data_dir} # data_dir is specified in config.yaml
+  #  data_path:
+  #    - mobile_pnp_dataset/testing
+  #  num_point: 8192
+  #  #num_point_occ: 90000
+  #  #num_point_seg: 5000
+  #  norm: True
+  #  norm_padding: 0.1
+  #  batch_size: 1
+  #  num_workers: 4
+  #  rand_rot: False # random rotation of input data'''

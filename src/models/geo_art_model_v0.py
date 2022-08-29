@@ -66,7 +66,6 @@ class GeoArtModelV0(pl.LightningModule):
             joint_param_revolute,
             joint_param_prismatic,
         ) = self(data["pc_start"], data["pc_end"], data["p_occ"], data["p_seg"]) 
-        # pc_start: 32x8192x3, pc_end: 32x8192x3, p_occ: 32x2048x3, p_seg: 32x512x3
         joint_label = data["joint_type"].unsqueeze(-1).repeat(1, data["p_seg"].size(1))
         loss_occ = self.cri_cls(logits_occ, data["occ_label"].float())
 
@@ -88,7 +87,7 @@ class GeoArtModelV0(pl.LightningModule):
             joint_param_prismatic,
         #) = self(data["pc_start"][:,:100,:], data["pc_end"][:,:100,:], data["p_occ"][:,:100,:], data["p_seg"][:,:100,:]) 
         ) = self(data["pc_start"], data["pc_end"], data["p_occ"], data["p_seg"])
-        joint_label = data["joint_type"].unsqueeze(-1).repeat(1, data["p_seg"].size(1))
+        #joint_label = data["joint_type"].unsqueeze(-1).repeat(1, data["p_seg"].size(1))
         loss_occ = self.cri_cls(logits_occ, data["occ_label"].float())
 
         # [modification] remove extra loss function parts

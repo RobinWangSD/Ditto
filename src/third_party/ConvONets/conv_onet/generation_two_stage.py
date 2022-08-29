@@ -193,11 +193,12 @@ class Generator3D(object):
                     occ_hat = -occ_hat
 
             seg_prob = torch.sigmoid(seg_hat)
+            '''
             if index == 0:
                 occ_hat[seg_prob > self.seg_threshold] -= 1e5
             elif index == 1:
                 occ_hat[seg_prob <= self.seg_threshold] -= 1e5
-
+            '''
             mobile_points.append(
                 pi[
                     :,
@@ -226,6 +227,7 @@ class Generator3D(object):
         threshold = np.log(self.threshold) - np.log(1.0 - self.threshold)
         # Make sure that mesh is watertight
         t0 = time.time()
+        
         occ_hat_padded = np.pad(occ_hat, 1, "constant", constant_values=-1e6)
         # import pdb; pdb.set_trace()
         vertices, triangles = libmcubes.marching_cubes(occ_hat_padded, threshold)

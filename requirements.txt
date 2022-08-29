@@ -1,5 +1,6 @@
 # --------- pytorch --------- #
 pytorch-lightning==1.5.4
+#torch==1.7.1
 torchmetrics==0.4.1
 setuptools==59.5.0
 

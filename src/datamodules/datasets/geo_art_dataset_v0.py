@@ -64,12 +64,17 @@ class GeoArtDatasetV0(Dataset):
             occ_label, seg_label = occ_to_binary_label(
                 data["start_occ_list"], joint_index + 1
             )
-        else:
+        else: 
             if "syn" in self.path_list[index]:
                 joint_index = 1
+
+            occ_label = data["start_occ_list"][1,:]
+            seg_label = data["start_occ_list"][0,:]
+            '''
             occ_label, seg_label = occ_to_binary_label(
                 data["start_occ_list"], joint_index
             )
+            '''
 
         # process occ and seg points
 
@@ -169,6 +174,7 @@ class GeoArtDatasetV0(Dataset):
             "scale": scale,
             "center": center,
             "data_path": self.path_list[index],
+            "T_world_nocs": data["T_world_nocs"]
         }
         for k, v in return_dict.items():
             if isinstance(v, np.ndarray):
